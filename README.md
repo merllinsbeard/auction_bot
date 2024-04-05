@@ -1,0 +1,1 @@
+# Auction bot for the channel with @CryptoBot connection
