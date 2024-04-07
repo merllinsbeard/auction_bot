@@ -2,7 +2,7 @@
 name = "auction-bot"
 version = "0.1.0"
 description = ""
-authors = ["merllinsbeard <timofeyzhuravlev1@mail.ru>"]
+authors = ["merllinsbeard"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
