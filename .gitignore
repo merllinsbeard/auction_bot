@@ -1,5 +1,0 @@
-.env
-bot.log
-database/__pycache__/
-tests/
-.gitignore
