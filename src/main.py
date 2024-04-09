@@ -2,8 +2,6 @@ from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 import os, asyncio, logging
 
-from handlers.routers import router1
-
 
 logging.basicConfig(filename='bot.log',
                     level=logging.INFO,
@@ -19,7 +17,7 @@ dp = Dispatcher()
 
 async def main():
 
-    dp.include_routers(router1)
+    dp.include_routers()
     await dp.start_polling(bot)
 
 
