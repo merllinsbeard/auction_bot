@@ -8,7 +8,7 @@ from aiohttp import web
 
 
 # # web = web.Application()
-# crypto = AioCryptoPay('12348:AAAXtE4Q4mmzixH33DxHkMEhmWbfJd8hczr', network=Networks.TEST_NET)
+# crypto = AioCryptoPay('', network=Networks.TEST_NET)
 
 # DESCRIPTION = "Оплатите участие"
 
