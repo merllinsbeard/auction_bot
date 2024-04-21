@@ -1,8 +1,8 @@
 from aiogram.fsm.state import State, StatesGroup
 
 class AdminMenuStates(StatesGroup):
-    start = State()
-    mainmenu = State()
-    channels = State()
-    statistics = State()
+    MENU = State()
+    START_AUCTION = State()
+    ADDED_CHANNELS = State()
+    STATISTICS = State()
     

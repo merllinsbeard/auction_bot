@@ -3,6 +3,17 @@ from aiocryptopay.models.update import Update
 import asyncio
 from aiohttp import web
 
+#TODO: сделать класс нормально назвать модуль распределит по модулям сделать ахуенна)
+
+
+
+
+
+
+
+
+
+
 
 # from . import TOKEN_CRYPTO
 

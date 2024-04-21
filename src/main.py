@@ -5,8 +5,9 @@ import asyncio
 import logging
 
 
-from bot.handlers.admin.admin import admin_messages_router
-from bot.handlers.admin.callbacks import callbacks_admin_router
+from bot.handlers.admin.text_handlers import admin_messages_router
+from bot.handlers.admin.button_handlers import callbacks_admin_router
+from ORM.init_db import DatabaseConnector
 
 
 logging.basicConfig(filename='bot.log',
@@ -24,7 +25,11 @@ dp = Dispatcher()
 
 async def main():
     
-
+    try:
+        await DatabaseConnector.get_instance()
+    except Exception as e:
+        logging.exception(f'ошибка подключения DatabaseConnector.get_instance(): {e}')
+        
     dp.include_routers(
         admin_messages_router,
         callbacks_admin_router,
