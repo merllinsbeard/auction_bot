@@ -1,13 +1,13 @@
-from aiogram import Bot, Dispatcher
-from dotenv import load_dotenv
-import os
+from aiogram import Dispatcher
 import asyncio
 import logging
 
-
+from BotSingleton import BotSingleton
 from bot.handlers.admin.text_handlers import admin_messages_router
 from bot.handlers.admin.button_handlers import callbacks_admin_router
+from bot.handlers.channel.added_tochannel_router import router_addbot_tochannel
 from ORM.init_db import DatabaseConnector
+from config import BOT_TOKEN
 
 
 logging.basicConfig(filename='bot.log',
@@ -15,11 +15,8 @@ logging.basicConfig(filename='bot.log',
                     format='%(asctime)s - %(levelname)s - %(message)s'
                     )
 
-load_dotenv()
-TOKEN = os.getenv('TOKEN')
 
-
-bot = Bot(TOKEN)
+bot = BotSingleton(BOT_TOKEN)
 dp = Dispatcher()
 
 
@@ -33,6 +30,7 @@ async def main():
     dp.include_routers(
         admin_messages_router,
         callbacks_admin_router,
+        router_addbot_tochannel
     )
     
     await bot.delete_webhook(drop_pending_updates=True)

@@ -1,100 +1,122 @@
 from tortoise.models import Model
 from tortoise import fields
+import uuid
+import logging
+from datetime import datetime 
 
 
 class Channel(Model):
     channel_id = fields.BigIntField(pk=True)
     channel_name = fields.CharField(max_length=255)
-    auction_sum = fields.IntField(default=0)
-
+    auctions = fields.ReverseRelation["Auction"]
+    
     class Meta:
         table = "channels"
 
     @classmethod
-    async def add_channel(cls, channel_id, channel_name):
-        await cls.create(channel_id=channel_id, channel_name=channel_name, auction_sum=0)
+    async def add_or_update_channel(cls, channel_id, channel_name):
+        try:
+            channel = await cls.get_or_none(channel_id=channel_id)
+            if channel:
+                channel.channel_name = channel_name
+                await channel.save()
+                logging.info(f'Канал с ID {channel_id} обновлен: новое название - {channel_name}')
+            else:
+                await cls.create(channel_id=channel_id, channel_name=channel_name)
+                logging.info(f'Канал с ID {channel_id} добавлен с названием {channel_name}')
+        except Exception as e:
+            logging.error(f'ошибка при добавлении или обновлении канала {channel_id}: {e}')
+            raise
+            
+    @classmethod
+    async def remove_channel(cls, channel_id):
+        try:
+            await cls.filter(channel_id=channel_id).delete()
+        except Exception as e:
+            logging.error(f'Ошибка при удалении канала {channel_id}: {e}')
+            raise 
+        
+    @classmethod
+    async def get_channels_list_format(cls):
+        try:
+            channels = await cls.all().values('channel_id', 'channel_name')
+            if channels:
+                lines = []
+                for channel in channels:
+                    auctions_count = await cls.count_auctions(channel['channel_id'])
+                    lines.append(
+                        f"💎 {channel['channel_name']}\n     🔗Id: {channel['channel_id']}\n     🔗Кол-во аукционов: {auctions_count}"
+                    )
+                return "<b>Добавленные каналы:</b>\n\n" + "\n".join(lines)
+            else:
+                return "У вас нет подключенных каналов."
+        except Exception as e:
+            logging.error(f'Ошибка в методе get_channels_list_format: {e}')
+            return "Ошибка при загрузке списка каналов"
+        
+    @classmethod
+    async def count_auctions(cls, channel_id):
+        count = await Auction.filter(channel_id=channel_id).count()
+        return count
 
     @classmethod
-    async def get_channels(cls):
-        return await cls.all().values()
+    async def get_channel_title(cls, channel_id):
+        channel = await cls.get_or_none(channel_id=channel_id)
+        if channel:
+            return channel.channel_name
+        else:
+            return None
+        
+            
+    
+class Auction(Model):
+    id = fields.CharField(pk=True, max_length=50)
+    channel = fields.ForeignKeyField('models.Channel', related_name='auctions')  # связь с моделью Channel
+    number_of_members = fields.IntField(default=0)
+    time_of_start = fields.DatetimeField()
+    time_of_end = fields.DatetimeField(null=True)
+    last_bet_time = fields.DatetimeField(null=True)
+    auction_bank = fields.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    prize = fields.IntField()
+    
+    class Meta:
+        table = "auctions"
+    
+    @classmethod
+    async def create_auction(cls, channel: Channel, prize):
+        id = cls.generate_unique_id()
+        auction = await cls.create(
+            id=id,
+            channel=channel,
+            time_of_start=cls.get_now_time(),
+            prize=prize
+        )
+        return auction
+        
+    @staticmethod
+    def generate_unique_id():
+        return str(uuid.uuid4())
+    
+    @staticmethod
+    def get_now_time():
+        return datetime.now()
+    
+    @classmethod
+    async def write_end_time(cls, auction_id, end_time):
+        auction = await cls.get(id=auction_id)
+        auction.time_of_end = end_time
+        await auction.save()
+    
+    @classmethod
+    async def write_last_bet_time(cls, auction_id, last_bet_time):
+        auction = await cls.get(id=auction_id)
+        auction.last_bet_time = last_bet_time
+        await auction.save()
+    
+    @classmethod
+    async def plus_one_member():
+        pass
 
 
-# class DatabaseModel:
-#     def __init__(self, pool: Pool):
-#         self.pool = pool
-#         logging.info('создан пул в базовом классе DatabaseModel')
-
-#     async def execute(self, query, args=None):
-#         try:
-#             async with self.pool.acquire() as conn:
-#                 async with conn.cursor() as cursor:
-#                     await cursor.execute(query, args)
-#                     await conn.commit()
-#                     return cursor
-#         except Exception as e:
-#             logging.exception(f'ошибка в методе execute базового класса DatabaseModel {e}')
-
-
-#     async def fetch(self, query, args=None):
-#         try:
-#             async with self.pool.acquire() as conn:
-#                 async with conn.cursor(aiomysql.DictCursor) as cursor:
-#                     await cursor.execute(query, args)
-#                     result = await cursor.fetchall()
-#                     return result
-#         except Exception as e:
-#             logging.exception(f'ошибка в методе fetch базового класса DatabaseModel {e}')
-
-
-# class ChannelTable(DatabaseModel):
-
-#     async def init_table(self):
-#         create_table_query = """
-#         CREATE TABLE IF NOT EXISTS Channels (
-#             channel_id BIGINT PRIMARY KEY,
-#             channel_name VARCHAR(255),
-#             auction_sum INT 
-#         );
-#         """
-#         try:
-#             await self.execute(create_table_query)
-#             logging.info(f'создана успешно таблица для каналов')
-#         except Exception as e:
-#             logging.exception(f"Ошибка в методе init_table класса ChannelTable: {e}")
-
-#     async def add_channel(self, channel_id, channel_name):
-#         query = """
-#         INSERT INTO Channels (channel_id, channel_name, auction_sum) VALUES (%s, %s, %s);
-#         """
-#         try:
-#             await self.execute(query, (channel_id, channel_name, 0))
-#             logging.info(f'успешно добавлен канал через метод add_channel класса ChannelTable ')
-#         except Exception as e:
-#             logging.exception(f"Ошибка в методе add_channel класса ChannelTable: {e}")
-
-
-#     async def get_channels(self):
-#         try:
-#             query = "SELECT * FROM Channels"
-#             res = await self.fetch(query)
-#             logging.info(f'успешно выведена информация с помощью get_channels класса ChannelTable')
-#         except Exception as e:
-#             logging.exception(f"ошибка в методе get_channels класса ChannelTable: {e}")
-
-#         return res
-
-
-# # class AuctionsTable(DatabaseModel):
-# #     async def add_post(self, channel_id, content, timestamp):
-# #         query = "INSERT INTO Posts (channel_id, content, timestamp) VALUES (%s, %s, %s)"
-# #         await self.execute(query, (channel_id, content, timestamp))
-
-# #     async def get_posts_by_channel(self, channel_id):
-# #         query = "SELECT * FROM Posts WHERE channel_id = %s"
-# #         return await self.fetch(query, (channel_id,))
-
-
-# # class AuctionUsers(DatabaseModel):
-# #     async def add_subscriber(self, channel_id, user_id, subscribe_date):
-# #         query = "INSERT INTO Subscribers (channel_id, user_id, subscribe_date) VALUES (%s, %s, %s)"
-# #         await self.execute(query
+class Member(Model):
+    ...
